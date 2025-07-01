@@ -1,0 +1,27 @@
+volumes:
+  pg_user:
+
+services:
+  user_db:
+    image: postgres
+    restart: always
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=123456
+      - POSTGRES_DB=userdb
+    volumes:
+      - pg_user:/var/lib/postgresql/data
+
+    ports:
+      - "5432:5432"
+
+  app:
+    restart: always
+    build: .
+    ports:
+      - "8080:8080"
+    depends_on:
+      - user_db
+    environment:
+      SPRING_DATASOURCE_URL: 'jdbc:postgresql://user_db:5432/userdb'
+      JAVA_OPTS: '-Xmx512m'
