@@ -14,6 +14,7 @@ public class UserMapper {
      * Преобразует сущность пользователя в DTO.
      *
      * @param user сущность пользователя
+     *
      * @return DTO пользователя или {@code null}, если входное значение {@code null}
      */
     public UserDto toDto(User user) {
@@ -24,6 +25,7 @@ public class UserMapper {
         dto.setEmail(user.getEmail());
         dto.setAge(user.getAge());
         dto.setCreatedAt(user.getCreatedAt());
+
         return dto;
     }
 
@@ -31,6 +33,7 @@ public class UserMapper {
      * Преобразует DTO в сущность пользователя.
      *
      * @param dto DTO пользователя
+     *
      * @return сущность пользователя или {@code null}, если входное значение {@code null}
      */
     public User toEntity(UserDto dto) {
@@ -41,6 +44,7 @@ public class UserMapper {
         user.setEmail(dto.getEmail());
         user.setAge(dto.getAge());
         user.setCreatedAt(dto.getCreatedAt());
+
         return user;
     }
 }

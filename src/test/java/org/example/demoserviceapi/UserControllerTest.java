@@ -34,7 +34,7 @@ class UserControllerTest {
 
     @BeforeEach
     void setup() {
-        userRepository.deleteAll(); // Чистим БД перед каждым тестом
+        userRepository.deleteAll();
     }
 
     @Test

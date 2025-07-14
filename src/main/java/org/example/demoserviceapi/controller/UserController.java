@@ -1,6 +1,5 @@
 package org.example.demoserviceapi.controller;
 
-import lombok.RequiredArgsConstructor;
 import org.example.demoserviceapi.dto.UserDto;
 import org.example.demoserviceapi.service.UserService;
 import org.springframework.http.HttpStatus;
@@ -13,10 +12,13 @@ import java.util.List;
  */
 @RestController
 @RequestMapping("/api/users")
-@RequiredArgsConstructor
 public class UserController {
 
     private final UserService userService;
+
+    public UserController(UserService userService) {
+        this.userService = userService;
+    }
 
     /**
      * Получить список всех пользователей.
@@ -32,6 +34,7 @@ public class UserController {
      * Получить пользователя по его ID.
      *
      * @param id идентификатор пользователя
+     *
      * @return данные пользователя
      */
     @GetMapping("/{id}")
@@ -43,6 +46,7 @@ public class UserController {
      * Создать нового пользователя.
      *
      * @param dto данные пользователя
+     *
      * @return созданный пользователь
      */
     @PostMapping
@@ -56,6 +60,7 @@ public class UserController {
      *
      * @param id  идентификатор пользователя
      * @param dto обновлённые данные
+     *
      * @return обновлённый пользователь
      */
     @PutMapping("/{id}")

@@ -3,6 +3,8 @@ package org.example.demoserviceapi.service;
 import lombok.RequiredArgsConstructor;
 import org.example.demoserviceapi.dto.UserDto;
 import org.example.demoserviceapi.entity.User;
+import org.example.demoserviceapi.kafka.KafkaProducer;
+import org.example.demoserviceapi.kafka.UserEvent;
 import org.example.demoserviceapi.mapper.UserMapper;
 import org.example.demoserviceapi.repository.UserRepository;
 import org.springframework.stereotype.Service;
@@ -23,6 +25,7 @@ public class UserServiceImpl implements UserService {
 
     private final UserRepository userRepository;
     private final UserMapper mapper;
+    private final KafkaProducer KafkaProducer;
 
     /**
      * Получить всех пользователей.
@@ -61,6 +64,10 @@ public class UserServiceImpl implements UserService {
         User user = mapper.toEntity(userDto);
         user.setId(null); // сбрасываем id для новой сущности
         User saved = userRepository.save(user);
+
+        // отправка события в Kafka
+        KafkaProducer.sendEvent(new UserEvent(saved.getEmail(), "CREATE"));
+
         return mapper.toDto(saved);
     }
 
@@ -90,6 +97,10 @@ public class UserServiceImpl implements UserService {
      */
     @Override
     public void deleteUser(Long id) {
-        userRepository.deleteById(id);
+        User user = userRepository.findById(id).orElseThrow();
+        userRepository.delete(user);
+
+        // отправка события в Kafka
+        KafkaProducer.sendEvent(new UserEvent(user.getEmail(), "DELETE"));
     }
 }

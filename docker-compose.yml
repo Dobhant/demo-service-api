@@ -1,27 +1,80 @@
-volumes:
-  pg_user:
+version: '3.8'
 
 services:
-  user_db:
-    image: postgres
-    restart: always
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.5.0
+    container_name: zookeeper
     environment:
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=123456
-      - POSTGRES_DB=userdb
+      ZOOKEEPER_CLIENT_PORT: 2181
+    ports:
+      - "2181:2181"
+
+  kafka:
+    image: confluentinc/cp-kafka:7.5.0
+    container_name: kafka
+    ports:
+      - "9092:9092"
+    depends_on:
+      - zookeeper
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+
+  user_db:
+    image: postgres:15
+    container_name: user-db
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: userdb
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 123456
     volumes:
       - pg_user:/var/lib/postgresql/data
 
+  demoserviceapi:
+    build: ./src/main/java/org/example/demoserviceapi
+    container_name: demoserviceapi
     ports:
-      - "5432:5432"
-
-  app:
-    restart: always
-    build: .
-    ports:
-      - "8080:8080"
-    depends_on:
-      - user_db
+      - "8081:8080"
     environment:
-      SPRING_DATASOURCE_URL: 'jdbc:postgresql://user_db:5432/userdb'
-      JAVA_OPTS: '-Xmx512m'
+      SPRING_DATASOURCE_URL: jdbc:postgresql://user_db:5432/userdb
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: 123456
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+    depends_on:
+      - kafka
+      - user_db
+
+  notificationservice:
+    build: ./src/main/java/org/example/notificationservice
+    container_name: notification-service
+    ports:
+      - "8082:8080"
+    environment:
+        SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+        SPRING_MAIL_HOST: smtp.gmail.com
+        SPRING_MAIL_PORT: 587
+        SPRING_MAIL_USERNAME: damaelion10@gmail.com
+        SPRING_MAIL_PASSWORD: uxib nkkk ispk huus
+        SPRING_MAIL_PROPERTIES_MAIL_SMTP_AUTH: true
+        SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE: true
+    depends_on:
+      - kafka
+
+  kafka-ui:
+    image: provectuslabs/kafka-ui
+    container_name: kafka-ui
+    ports:
+      - "8085:8080"
+    environment:
+      KAFKA_CLUSTERS_0_NAME: local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
+    depends_on:
+      - kafka
+
+volumes:
+  pg_user:

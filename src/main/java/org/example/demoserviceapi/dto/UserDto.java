@@ -1,26 +1,66 @@
 package org.example.demoserviceapi.dto;
 
-import lombok.Data;
 import java.time.LocalDateTime;
 
-/**
- * DTO для передачи данных о пользователе.
- */
-@Data
 public class UserDto {
 
-    /** Идентификатор пользователя. */
     private Long id;
-
-    /** Имя пользователя. */
     private String name;
-
-    /** Email пользователя. */
     private String email;
-
-    /** Возраст пользователя. */
     private int age;
-
-    /** Дата и время создания пользователя. */
     private LocalDateTime createdAt;
+
+    public UserDto() {
+    }
+
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
+    }
+
+    public int getAge() {
+        return age;
+    }
+
+    public void setAge(int age) {
+        this.age = age;
+    }
+
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
+    }
+
+    @Override
+    public String toString() {
+        return "UserDto{" +
+                "id=" + id +
+                ", name='" + name + '\'' +
+                ", email='" + email + '\'' +
+                ", age=" + age +
+                ", createdAt=" + createdAt +
+                '}';
+    }
 }
