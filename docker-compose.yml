@@ -11,6 +11,8 @@ services:
       - POSTGRES_DB=userdb
     volumes:
       - pg_user:/var/lib/postgresql/data
+    dns:
+      - 8.8.8.8
 
     ports:
       - "5432:5432"

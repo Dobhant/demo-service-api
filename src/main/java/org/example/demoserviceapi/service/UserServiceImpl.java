@@ -1,6 +1,5 @@
 package org.example.demoserviceapi.service;
 
-import lombok.RequiredArgsConstructor;
 import org.example.demoserviceapi.dto.UserDto;
 import org.example.demoserviceapi.entity.User;
 import org.example.demoserviceapi.mapper.UserMapper;
@@ -8,6 +7,7 @@ import org.example.demoserviceapi.repository.UserRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import jakarta.persistence.EntityNotFoundException;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -17,12 +17,17 @@ import java.util.stream.Collectors;
  * Предоставляет CRUD операции над сущностью User.
  */
 @Service
-@RequiredArgsConstructor
 @Transactional
 public class UserServiceImpl implements UserService {
 
     private final UserRepository userRepository;
     private final UserMapper mapper;
+
+    // Явный конструктор вместо Lombok
+    public UserServiceImpl(UserRepository userRepository, UserMapper mapper) {
+        this.userRepository = userRepository;
+        this.mapper = mapper;
+    }
 
     /**
      * Получить всех пользователей.
@@ -41,12 +46,12 @@ public class UserServiceImpl implements UserService {
      *
      * @param id идентификатор пользователя
      * @return пользователь с указанным id
-     * @throws RuntimeException если пользователь не найден
+     * @throws EntityNotFoundException если пользователь не найден
      */
     @Override
     public UserDto getUserById(Long id) {
         User user = userRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new EntityNotFoundException("User not found with id: " + id));
         return mapper.toDto(user);
     }
 
@@ -70,12 +75,12 @@ public class UserServiceImpl implements UserService {
      * @param id идентификатор пользователя для обновления
      * @param userDto новые данные пользователя
      * @return обновленный пользователь
-     * @throws RuntimeException если пользователь не найден
+     * @throws EntityNotFoundException если пользователь не найден
      */
     @Override
     public UserDto updateUser(Long id, UserDto userDto) {
         User user = userRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new EntityNotFoundException("User not found with id: " + id));
         user.setName(userDto.getName());
         user.setEmail(userDto.getEmail());
         user.setAge(userDto.getAge());
@@ -90,6 +95,9 @@ public class UserServiceImpl implements UserService {
      */
     @Override
     public void deleteUser(Long id) {
+        if (!userRepository.existsById(id)) {
+            throw new EntityNotFoundException("User not found with id: " + id);
+        }
         userRepository.deleteById(id);
     }
 }

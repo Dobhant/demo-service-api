@@ -1,76 +1,94 @@
 package org.example.demoserviceapi.controller;
 
-import lombok.RequiredArgsConstructor;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.example.demoserviceapi.dto.UserDto;
+import org.example.demoserviceapi.mapper.UserModelAssembler;
 import org.example.demoserviceapi.service.UserService;
+import org.springframework.hateoas.CollectionModel;
+import org.springframework.hateoas.EntityModel;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
-/**
- * REST-контроллер для управления пользователями.
- */
+import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.*;
+
 @RestController
 @RequestMapping("/api/users")
-@RequiredArgsConstructor
+@Tag(name = "User API", description = "Операции с пользователями")
 public class UserController {
 
     private final UserService userService;
+    private final UserModelAssembler userAssembler;
 
-    /**
-     * Получить список всех пользователей.
-     *
-     * @return список пользователей
-     */
+    public UserController(UserService userService, UserModelAssembler userAssembler) {
+        this.userService = userService;
+        this.userAssembler = userAssembler;
+    }
+
+    @Operation(summary = "Получить всех пользователей")
+    @ApiResponse(responseCode = "200", description = "Список пользователей успешно получен")
     @GetMapping
-    public List<UserDto> getAll() {
-        return userService.getAllUsers();
+    public CollectionModel<EntityModel<UserDto>> getAll() {
+        List<EntityModel<UserDto>> users = userService.getAllUsers().stream()
+                .map(userAssembler::toModel)
+                .collect(Collectors.toList());
+
+        return CollectionModel.of(users,
+                linkTo(methodOn(UserController.class).getAll()).withSelfRel());
     }
 
-    /**
-     * Получить пользователя по его ID.
-     *
-     * @param id идентификатор пользователя
-     * @return данные пользователя
-     */
+    @Operation(summary = "Получить пользователя по ID")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Пользователь найден"),
+            @ApiResponse(responseCode = "404", description = "Пользователь не найден")
+    })
     @GetMapping("/{id}")
-    public UserDto getById(@PathVariable Long id) {
-        return userService.getUserById(id);
+    public ResponseEntity<EntityModel<UserDto>> getById(
+            @Parameter(description = "ID пользователя") @PathVariable Long id) {
+        UserDto user = userService.getUserById(id);
+        return ResponseEntity.ok(userAssembler.toModel(user));
     }
 
-    /**
-     * Создать нового пользователя.
-     *
-     * @param dto данные пользователя
-     * @return созданный пользователь
-     */
+    @Operation(summary = "Создать нового пользователя")
+    @ApiResponse(responseCode = "201", description = "Пользователь успешно создан")
     @PostMapping
-    @ResponseStatus(HttpStatus.CREATED)
-    public UserDto create(@RequestBody UserDto dto) {
-        return userService.createUser(dto);
+    public ResponseEntity<EntityModel<UserDto>> create(
+            @Parameter(description = "Данные пользователя") @RequestBody UserDto dto) {
+        UserDto created = userService.createUser(dto);
+        return ResponseEntity
+                .status(HttpStatus.CREATED)
+                .body(userAssembler.toModel(created));
     }
 
-    /**
-     * Обновить данные пользователя.
-     *
-     * @param id  идентификатор пользователя
-     * @param dto обновлённые данные
-     * @return обновлённый пользователь
-     */
+    @Operation(summary = "Обновить пользователя")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Пользователь обновлён"),
+            @ApiResponse(responseCode = "404", description = "Пользователь не найден")
+    })
     @PutMapping("/{id}")
-    public UserDto update(@PathVariable Long id, @RequestBody UserDto dto) {
-        return userService.updateUser(id, dto);
+    public ResponseEntity<EntityModel<UserDto>> update(
+            @Parameter(description = "ID пользователя") @PathVariable Long id,
+            @Parameter(description = "Обновлённые данные") @RequestBody UserDto dto) {
+        UserDto updated = userService.updateUser(id, dto);
+        return ResponseEntity.ok(userAssembler.toModel(updated));
     }
 
-    /**
-     * Удалить пользователя по ID.
-     *
-     * @param id идентификатор пользователя
-     */
+    @Operation(summary = "Удалить пользователя")
+    @ApiResponses({
+            @ApiResponse(responseCode = "204", description = "Пользователь удалён"),
+            @ApiResponse(responseCode = "404", description = "Пользователь не найден")
+    })
     @DeleteMapping("/{id}")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void delete(@PathVariable Long id) {
+    public ResponseEntity<Void> delete(
+            @Parameter(description = "ID пользователя") @PathVariable Long id) {
         userService.deleteUser(id);
+        return ResponseEntity.noContent().build();
     }
 }
