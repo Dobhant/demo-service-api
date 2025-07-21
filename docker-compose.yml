@@ -23,6 +23,17 @@ services:
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
 
+  kafka-ui:
+    image: provectuslabs/kafka-ui
+    container_name: kafka-ui
+    ports:
+      - "8085:8080"
+    environment:
+      KAFKA_CLUSTERS_0_NAME: local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
+    depends_on:
+      - kafka
+
   user_db:
     image: postgres:15
     container_name: user-db
@@ -35,46 +46,63 @@ services:
     volumes:
       - pg_user:/var/lib/postgresql/data
 
+  config-server:
+    build: ./src/main/java/org/example/configserver
+    container_name: configserver
+    ports:
+      - "8888:8888"
+    environment:
+      - GIT_REPO=https://github.com/Dobhant/demo-service-api.git
+    depends_on:
+      - kafka
+
+  discoveryserver:
+    build: ./src/main/java/org/example/discoveryserver
+    container_name: discoveryserver
+    ports:
+      - "8761:8761"
+    depends_on:
+      - config-server
+    environment:
+      - SPRING_CONFIG_IMPORT=configserver:http://config-server:8888
+
   demoserviceapi:
     build: ./src/main/java/org/example/demoserviceapi
     container_name: demoserviceapi
     ports:
       - "8081:8080"
-    environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://user_db:5432/userdb
-      SPRING_DATASOURCE_USERNAME: postgres
-      SPRING_DATASOURCE_PASSWORD: 123456
-      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
     depends_on:
       - kafka
       - user_db
+      - discoveryserver
+      - config-server
+    environment:
+      SPRING_CONFIG_IMPORT: configserver:http://config-server:8888
 
   notificationservice:
     build: ./src/main/java/org/example/notificationservice
     container_name: notification-service
     ports:
       - "8082:8080"
-    environment:
-        SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
-        SPRING_MAIL_HOST: smtp.gmail.com
-        SPRING_MAIL_PORT: 587
-        SPRING_MAIL_USERNAME: damaelion10@gmail.com
-        SPRING_MAIL_PASSWORD: uxib nkkk ispk huus
-        SPRING_MAIL_PROPERTIES_MAIL_SMTP_AUTH: true
-        SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE: true
     depends_on:
       - kafka
+      - discoveryserver
+      - config-server
+    environment:
+      SPRING_CONFIG_IMPORT: configserver:http://config-server:8888
 
-  kafka-ui:
-    image: provectuslabs/kafka-ui
-    container_name: kafka-ui
+  api-gateway:
+    build: ./src/main/java/org/example/apigateway
+    container_name: api-gateway
     ports:
-      - "8085:8080"
-    environment:
-      KAFKA_CLUSTERS_0_NAME: local
-      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
+      - "8080:8080"
     depends_on:
-      - kafka
+      - demoserviceapi
+      - notificationservice
+      - discoveryserver
+      - config-server
+    environment:
+      SPRING_CONFIG_IMPORT: configserver:http://config-server:8888
 
 volumes:
   pg_user:
