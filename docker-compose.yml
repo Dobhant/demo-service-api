@@ -1,0 +1,108 @@
+version: '3.8'
+
+services:
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.5.0
+    container_name: zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+    ports:
+      - "2181:2181"
+
+  kafka:
+    image: confluentinc/cp-kafka:7.5.0
+    container_name: kafka
+    ports:
+      - "9092:9092"
+    depends_on:
+      - zookeeper
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+
+  kafka-ui:
+    image: provectuslabs/kafka-ui
+    container_name: kafka-ui
+    ports:
+      - "8085:8080"
+    environment:
+      KAFKA_CLUSTERS_0_NAME: local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
+    depends_on:
+      - kafka
+
+  user_db:
+    image: postgres:15
+    container_name: user-db
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: userdb
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 123456
+    volumes:
+      - pg_user:/var/lib/postgresql/data
+
+  config-server:
+    build: ./src/main/java/org/example/configserver
+    container_name: configserver
+    ports:
+      - "8888:8888"
+    environment:
+      - GIT_REPO=https://github.com/Dobhant/demo-service-api.git
+    depends_on:
+      - kafka
+
+  discoveryserver:
+    build: ./src/main/java/org/example/discoveryserver
+    container_name: discoveryserver
+    ports:
+      - "8761:8761"
+    depends_on:
+      - config-server
+    environment:
+      - SPRING_CONFIG_IMPORT=configserver:http://config-server:8888
+
+  demoserviceapi:
+    build: ./src/main/java/org/example/demoserviceapi
+    container_name: demoserviceapi
+    ports:
+      - "8081:8080"
+    depends_on:
+      - kafka
+      - user_db
+      - discoveryserver
+      - config-server
+    environment:
+      SPRING_CONFIG_IMPORT: configserver:http://config-server:8888
+
+  notificationservice:
+    build: ./src/main/java/org/example/notificationservice
+    container_name: notification-service
+    ports:
+      - "8082:8080"
+    depends_on:
+      - kafka
+      - discoveryserver
+      - config-server
+    environment:
+      SPRING_CONFIG_IMPORT: configserver:http://config-server:8888
+
+  api-gateway:
+    build: ./src/main/java/org/example/apigateway
+    container_name: api-gateway
+    ports:
+      - "8080:8080"
+    depends_on:
+      - demoserviceapi
+      - notificationservice
+      - discoveryserver
+      - config-server
+    environment:
+      SPRING_CONFIG_IMPORT: configserver:http://config-server:8888
+
+volumes:
+  pg_user:
